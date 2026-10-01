@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Mi espacio | Clandy</title>
+
+</head>
+
+<body>
+
+    <h1>CLANDY 🎁</h1>
+
+    <h2>
+        Hola, {{ participante[2] }}
+    </h2>
+
+    <p>
+        Evento: <strong>{{ participante[13] }}</strong>
+    </p>
+
+    <hr>
+
+    {% if participante[16] != "sorteado" %}
+
+        <h2>⏳ El sorteo todavía no está disponible</h2>
+
+        <p>
+            El organizador todavía no ha realizado
+            el sorteo.
+        </p>
+
+    {% elif not revelacion %}
+
+        <h2>
+            🤫 Tu amigo secreto está esperando
+        </h2>
+
+        <p>
+            El sorteo ya fue realizado.
+        </p>
+
+        <p>
+            La identidad de tu amigo secreto
+            permanecerá oculta hasta:
+        </p>
+
+        <h3>
+            📅 {{ participante[14] }}
+            <br>
+            🕐 {{ participante[15] }}
+        </h3>
+
+        {% if asignado %}
+
+            <hr>
+
+            <h2>
+                🎁 Conoce a tu amigo secreto
+            </h2>
+
+            <p>
+                Su identidad permanece oculta,
+                pero puedes conocer sus preferencias.
+            </p>
+
+            <h3>Gustos</h3>
+            <p>{{ asignado[2] or "No especificados." }}</p>
+
+            <h3>Disgustos</h3>
+            <p>{{ asignado[3] or "No especificados." }}</p>
+
+            <h3>Hobbies</h3>
+            <p>{{ asignado[4] or "No especificados." }}</p>
+
+            <h3>Colores</h3>
+            <p>{{ asignado[5] or "No especificados." }}</p>
+
+            <h3>Tallas</h3>
+            <p>{{ asignado[6] or "No especificadas." }}</p>
+
+            <h3>Lista de deseos</h3>
+            <p>{{ asignado[7] or "No especificada." }}</p>
+
+            <hr>
+            
+            <h2>💬 Zona secreta</h2>
+            <p>
+                Comunícate de forma anónima con tu amigo secreto.
+            </p>
+
+<a href="/mi-espacio/{{ participante[12] }}/chat">
+    <button>
+        💬 Abrir chat secreto
+    </button>
+</a>
+
+<br><br>
+
+<a href="/mi-espacio/{{ participante[12] }}/pistas">
+    <button>
+        🔎 Ver pistas
+    </button>
+</a>
+        {% elif revelacion and asignado %}
+
+    <hr>
+
+    <h2>
+        🎉 ¡LLEGÓ EL MOMENTO!
+    </h2>
+
+    <p>
+        La fecha de revelación ha llegado.
+    </p>
+
+    <form
+        method="POST"
+        action="/mi-espacio/{{ participante[12] }}/revelar"
+    >
+
+        <button type="submit">
+            🎁 REVELAR MI AMIGO SECRETO
+        </button>
+
+    </form>
+
+{% endif %}
+
+</body>
+
+</html>

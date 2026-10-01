@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Pistas | Clandy</title>
+
+</head>
+
+<body>
+
+    <h1>🔎 Pistas</h1>
+
+    <p>
+        Las pistas son completamente anónimas.
+    </p>
+
+    <hr>
+
+    <h2>Pistas recibidas</h2>
+
+    {% if pistas %}
+
+        {% for pista in pistas %}
+
+            <p>
+                🔎 <strong>Pista:</strong>
+                {{ pista[0] }}
+            </p>
+
+            <small>
+                {{ pista[1] }}
+            </small>
+
+            <hr>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>
+            Todavía no has recibido ninguna pista.
+        </p>
+
+    {% endif %}
+
+    <h2>Enviar una pista</h2>
+
+    <form method="POST">
+
+        <textarea
+            name="pista"
+            rows="4"
+            cols="50"
+            placeholder="Escribe una pista anónima..."
+            required
+        ></textarea>
+
+        <br><br>
+
+        <button type="submit">
+            🔎 Enviar pista
+        </button>
+
+    </form>
+
+    <br>
+
+    <a href="/mi-espacio/{{ participante[3] }}">
+        ← Volver a mi espacio
+    </a>
+
+</body>
+
+</html>

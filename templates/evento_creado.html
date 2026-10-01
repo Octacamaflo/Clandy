@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Evento creado | Clandy</title>
+
+</head>
+
+<body>
+
+    <h1>¡Evento creado!</h1>
+
+    <p>
+        El evento
+        <strong>{{ nombre }}</strong>
+        fue creado correctamente.
+    </p>
+
+    <h2>Código de invitación</h2>
+
+    <p>
+        <strong>{{ codigo }}</strong>
+    </p>
+
+    <p>
+        Comparte este código con los participantes.
+    </p>
+
+    <h2>Enlace de invitación</h2>
+
+    <p>
+        <a href="{{ enlace }}">
+            {{ enlace }}
+        </a>
+    </p>
+
+    <h2>Código del organizador</h2>
+
+    <p>
+        <strong>{{ codigo_admin }}</strong>
+    </p>
+
+    <p>
+        Guarda este código.
+        Lo necesitarás para entrar al panel
+        y administrar tu evento.
+    </p>
+
+    <p>
+        <a href="/panel/{{ codigo_admin }}">
+            Entrar al panel del organizador
+        </a>
+    </p>
+
+    <br>
+
+    <a href="/">
+        Volver a Clandy
+    </a>
+
+</body>
+
+</html>

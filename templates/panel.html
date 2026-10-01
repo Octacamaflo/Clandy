@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta <!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Panel del organizador | Clandy</title>
+
+</head>
+
+<body>
+
+    <h1>Panel del organizador</h1>
+
+    <h2>{{ evento[1] }}</h2>
+
+    <h3>Información del evento</h3>
+
+    <p>
+        <strong>Fecha de revelación:</strong>
+        {{ evento[2] }}
+    </p>
+
+    <p>
+        <strong>Hora de revelación:</strong>
+        {{ evento[3] }}
+    </p>
+
+    <p>
+        <strong>Presupuesto mínimo:</strong>
+        ${{ evento[4] }}
+    </p>
+
+    <p>
+        <strong>Presupuesto máximo:</strong>
+        ${{ evento[5] }}
+    </p>
+
+    <p>
+    <strong>Estado:</strong> {% if evento[8] == "abierto" %}
+        🟢 Inscripciones abiertas
+    {% else %}
+        🔴 Inscripciones cerradas
+    {% endif %}  
+
+</p>{% if evento[8] == "abierto" %}
+
+    <form
+        method="POST"
+        action="/cerrar-inscripciones/{{ evento[7] }}"
+    >
+
+        <button type="submit">
+            🔒 Cerrar inscripciones
+        </button>
+
+    </form>
+
+{% else %}
+
+    <p>
+        Las inscripciones están cerradas.
+    </p>
+
+{% endif %}
+
+{% if evento[8] == "cerrado" %}
+
+    <hr>
+
+    <h2>Realizar sorteo</h2>
+
+    <p>
+        Las inscripciones están cerradas.
+        Ya puedes realizar el sorteo.
+    </p>
+
+    <form
+        method="POST"
+        action="/realizar-sorteo/{{ evento[7] }}"
+    >
+
+        <button type="submit">
+            🎲 Realizar sorteo
+        </button>
+
+    </form>
+
+{% elif evento[8] == "sorteado" %}
+
+    <hr>
+
+    <h2>🎲 Sorteo realizado</h2>
+
+    <p>
+        El sorteo ya fue realizado.
+        Las asignaciones permanecen privadas.
+    </p>
+
+{% endif %}
+
+    <hr>
+
+    <h2>Participantes</h2>
+
+    <p>
+        Participantes registrados:
+        <strong>{{ participantes|length }}</strong>
+    </p>
+
+    {% if participantes %}
+
+        {% for participante in participantes %}
+
+            <hr>
+
+            <h3>
+                {{ participante[2] }}
+            </h3>
+
+            <p>
+                <strong>Correo:</strong>
+                {{ participante[3] }}
+            </p>
+
+            <p>
+                <strong>WhatsApp:</strong>
+                {{ participante[4] }}
+            </p>
+
+            <p>
+                <strong>Presupuesto:</strong>
+                ${{ participante[5] }}
+            </p>
+
+            <h4>Preferencias</h4>
+
+            <p>
+                <strong>Gustos:</strong>
+                {{ participante[6] }}
+            </p>
+
+            <p>
+                <strong>Disgustos:</strong>
+                {{ participante[7] }}
+            </p>
+
+            <p>
+                <strong>Hobbies:</strong>
+                {{ participante[8] }}
+            </p>
+
+            <p>
+                <strong>Colores:</strong>
+                {{ participante[9] }}
+            </p>
+
+            <p>
+                <strong>Tallas:</strong>
+                {{ participante[10] }}
+            </p>
+
+            <p>
+                <strong>Lista de deseos:</strong>
+                {{ participante[11] }}
+            </p>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>
+            Todavía no hay participantes registrados.
+        </p>
+
+    {% endif %}
+
+    <hr>
+
+    <hr>
+
+<h2>Restricciones</h2>
+
+<p>
+    Indica qué participante no puede sacar a otra persona.
+</p>
+
+<form
+    method="POST"
+    action="/agregar-restriccion/{{ evento[7] }}"
+>
+
+    <label>
+        Participante:
+    </label>
+
+    <select name="participante_id" required>
+
+        <option value="">
+            Seleccionar participante
+        </option>
+
+        {% for participante in participantes %}
+
+            <option value="{{ participante[0] }}">
+                {{ participante[2] }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <label>
+        No puede sacar a:
+    </label>
+
+    <select name="restringido_id" required>
+
+        <option value="">
+            Seleccionar participante
+        </option>
+
+        {% for participante in participantes %}
+
+            <option value="{{ participante[0] }}">
+                {{ participante[2] }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <button type="submit">
+        Agregar restricción
+    </button>
+
+</form>
+
+{% if restricciones %}
+
+    <h3>Restricciones actuales</h3>
+
+    <ul>
+
+        {% for restriccion in restricciones %}
+
+            <li>
+                {{ restriccion[2] }}
+                no puede sacar a
+                {{ restriccion[3] }}
+            </li>
+
+        {% endfor %}
+
+    </ul>
+
+{% else %}
+
+    <p>
+        No hay restricciones configuradas.
+    </p>
+
+{% endif %}
+
+    <a href="/">
+        Volver a Clandy
+    </a>
+
+</body>
+
+</html>charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Panel | Clandy</title>
+
+</head>
+
+<body>
+
+    <h1>Panel del organizador</h1>
+
+    <h2>{{ evento[1] }}</h2>
+
+    <p>
+        <strong>Fecha de revelación:</strong>
+        {{ evento[2] }}
+    </p>
+
+    <p>
+        <strong>Hora:</strong>
+        {{ evento[3] }}
+    </p>
+
+    <p>
+        <strong>Participantes:</strong>
+        {{ participantes|length }}
+    </p>
+
+    <hr>
+
+    <h2>Participantes</h2>
+
+    {% if participantes %}
+
+        <ul>
+
+        {% for participante in participantes %}
+
+            <li>
+                {{ participante[2] }}
+                — {{ participante[3] }}
+            </li>
+
+        {% endfor %}
+
+        </ul>
+
+    {% else %}
+
+        <p>
+            Todavía no hay participantes.
+        </p>
+
+    {% endif %}
+
+</body>
+
+</html>

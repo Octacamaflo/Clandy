@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Chat secreto | Clandy</title>
+
+</head>
+
+<body>
+
+    <h1>💬 Chat secreto</h1>
+
+    <p>
+        Esta conversación es anónima.
+    </p>
+
+    <hr>
+
+    {% if mensajes %}
+
+        {% for mensaje in mensajes %}
+
+            <p>
+
+                {% if mensaje[0] == participante[0] %}
+
+                    <strong>Tú:</strong>
+
+                {% else %}
+
+                    <strong>Tu amigo secreto:</strong>
+
+                {% endif %}
+
+                {{ mensaje[1] }}
+
+            </p>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>
+            Todavía no hay mensajes.
+        </p>
+
+    {% endif %}
+
+    <hr>
+
+    <form method="POST">
+
+        <textarea
+            name="mensaje"
+            rows="4"
+            cols="50"
+            placeholder="Escribe un mensaje..."
+            required
+        ></textarea>
+
+        <br><br>
+
+        <button type="submit">
+            Enviar mensaje 💬
+        </button>
+
+    </form>
+
+    <br>
+
+    <a href="/mi-espacio/{{ participante[3] }}">
+        ← Volver a mi espacio
+    </a>
+
+</body>
+
+</html>

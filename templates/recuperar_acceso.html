@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Recuperar acceso - Clandy</title>
+
+</head>
+
+<body>
+
+    <h1>🔐 Recuperar acceso</h1>
+
+    <p>
+        Introduce el correo que utilizaste para registrarte
+        en Clandy.
+    </p>
+
+    <form method="POST">
+
+        <label for="correo">
+            Correo electrónico:
+        </label>
+
+        <br>
+
+        <input
+            type="email"
+            id="correo"
+            name="correo"
+            required
+        >
+
+        <br><br>
+
+        <button type="submit">
+            📧 Enviar enlace de acceso
+        </button>
+
+    </form>
+
+    {% if mensaje %}
+
+        <p>
+            {{ mensaje }}
+        </p>
+
+    {% endif %}
+
+    <br>
+
+    <a href="/">
+        Volver al inicio
+    </a>
+
+</body>
+
+</html>

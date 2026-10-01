@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Crear evento | Clandy</title>
+</head>
+
+<body>
+
+    <h1>Crear evento</h1>
+
+    <form method="POST">
+
+        <label>
+            Nombre del evento:
+        </label>
+
+        <input
+            type="text"
+            name="nombre"
+            required
+        >
+
+        <br><br>
+
+        <label>
+            Fecha de revelación:
+        </label>
+
+        <input
+            type="date"
+            name="fecha"
+            required
+        >
+
+        <br><br>
+
+        <label>
+            Hora de revelación:
+        </label>
+
+        <input
+            type="time"
+            name="hora"
+            required
+        >
+
+        <br><br>
+
+        <label>
+            Presupuesto mínimo:
+        </label>
+
+        <input
+            type="number"
+            name="minimo"
+            min="0"
+            required
+        >
+
+        <br><br>
+
+        <label>
+            Presupuesto máximo:
+        </label>
+
+        <input
+            type="number"
+            name="maximo"
+            min="0"
+            required
+        >
+
+        <br><br>
+
+        <button type="submit">
+            Crear evento
+        </button>
+
+    </form>
+
+    <br>
+
+    <a href="/">
+        Volver
+    </a>
+
+</body>
+
+</html>
