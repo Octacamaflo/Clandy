@@ -46,8 +46,8 @@ def actualizar_base_datos():
             nombre TEXT NOT NULL,
             fecha TEXT NOT NULL,
             hora TEXT NOT NULL,
-            minimo REAL NOT NULL,
-            maximo REAL NOT NULL,
+            presupuesto_minimo REAL NOT NULL,
+            presupuesto_maximo REAL NOT NULL,
             codigo TEXT,
             codigo_admin TEXT,
             estado TEXT DEFAULT 'abierto'
@@ -151,6 +151,18 @@ def actualizar_base_datos():
             ADD COLUMN estado TEXT DEFAULT 'abierto'
         """)
 
+    if "presupuesto_minimo" not in columnas_eventos:
+        cursor.execute("""
+            ALTER TABLE eventos
+            ADD COLUMN presupuesto_minimo REAL
+        """)
+
+    if "presupuesto_maximo" not in columnas_eventos:
+        cursor.execute("""
+            ALTER TABLE eventos
+            ADD COLUMN presupuesto_maximo REAL
+        """)
+
     columnas_participantes = [
         fila[1]
         for fila in cursor.execute(
@@ -172,7 +184,6 @@ def actualizar_base_datos():
 
     conexion.commit()
     conexion.close()
-
 
 def generar_codigo():
     caracteres = string.ascii_uppercase + string.digits
