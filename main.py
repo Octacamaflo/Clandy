@@ -40,45 +40,41 @@ def actualizar_base_datos():
     conexion = conectar()
     cursor = conexion.cursor()
 
-    columnas_eventos = [
-        fila[1]
-        for fila in cursor.execute(
-            "PRAGMA table_info(eventos)"
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS eventos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            fecha TEXT NOT NULL,
+            hora TEXT NOT NULL,
+            minimo REAL NOT NULL,
+            maximo REAL NOT NULL,
+            codigo TEXT,
+            codigo_admin TEXT,
+            estado TEXT DEFAULT 'abierto'
         )
-    ]
+    """)
 
-    if "codigo" not in columnas_eventos:
-        cursor.execute("""
-            ALTER TABLE eventos
-            ADD COLUMN codigo TEXT
-        """)
-
-    if "codigo_admin" not in columnas_eventos:
-        cursor.execute("""
-            ALTER TABLE eventos
-            ADD COLUMN codigo_admin TEXT
-        """)
-
-    if "estado" not in columnas_eventos:
-        cursor.execute("""
-        ALTER TABLE eventos
-        ADD COLUMN estado TEXT DEFAULT 'abierto'
-        """)
-
-    columnas_participantes = [
-        fila[1]
-        for fila in cursor.execute(
-            "PRAGMA table_info(participantes)"
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS participantes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            evento_id INTEGER NOT NULL,
+            nombre TEXT NOT NULL,
+            correo TEXT NOT NULL,
+            telefono TEXT,
+            presupuesto REAL,
+            gustos TEXT,
+            disgustos TEXT,
+            hobbies TEXT,
+            colores TEXT,
+            tallas TEXT,
+            deseos TEXT,
+            codigo_acceso TEXT,
+            revelo INTEGER DEFAULT 0,
+            FOREIGN KEY (evento_id) REFERENCES eventos(id)
         )
-    ]
+    """)
 
-    if "codigo_acceso" not in columnas_participantes:
-        cursor.execute("""
-            ALTER TABLE participantes
-            ADD COLUMN codigo_acceso TEXT
-        """)
-
-        cursor.execute("""
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS restricciones (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             evento_id INTEGER NOT NULL,
@@ -87,18 +83,6 @@ def actualizar_base_datos():
             FOREIGN KEY (evento_id) REFERENCES eventos(id),
             FOREIGN KEY (participante_id) REFERENCES participantes(id),
             FOREIGN KEY (restringido_id) REFERENCES participantes(id)
-        )
-    """)    
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS restricciones (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        evento_id INTEGER NOT NULL,
-        participante_id INTEGER NOT NULL,
-        restringido_id INTEGER NOT NULL,
-        FOREIGN KEY (evento_id) REFERENCES eventos(id),
-        FOREIGN KEY (participante_id) REFERENCES participantes(id),
-        FOREIGN KEY (restringido_id) REFERENCES participantes(id)
         )
     """)
 
@@ -113,6 +97,7 @@ def actualizar_base_datos():
             FOREIGN KEY (asignado_id) REFERENCES participantes(id)
         )
     """)
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS mensajes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -139,16 +124,47 @@ def actualizar_base_datos():
             FOREIGN KEY (remitente_id) REFERENCES participantes(id),
             FOREIGN KEY (destinatario_id) REFERENCES participantes(id)
         )
-    """)  
-
-    cursor.execute("""
-        PRAGMA table_info(participantes)
     """)
 
-    columnas_participantes = [fila[1] for fila in cursor.fetchall()]
+    columnas_eventos = [
+        fila[1]
+        for fila in cursor.execute(
+            "PRAGMA table_info(eventos)"
+        )
+    ]
 
-    if "revelo" not in columnas_participantes:  
+    if "codigo" not in columnas_eventos:
+        cursor.execute("""
+            ALTER TABLE eventos
+            ADD COLUMN codigo TEXT
+        """)
 
+    if "codigo_admin" not in columnas_eventos:
+        cursor.execute("""
+            ALTER TABLE eventos
+            ADD COLUMN codigo_admin TEXT
+        """)
+
+    if "estado" not in columnas_eventos:
+        cursor.execute("""
+            ALTER TABLE eventos
+            ADD COLUMN estado TEXT DEFAULT 'abierto'
+        """)
+
+    columnas_participantes = [
+        fila[1]
+        for fila in cursor.execute(
+            "PRAGMA table_info(participantes)"
+        )
+    ]
+
+    if "codigo_acceso" not in columnas_participantes:
+        cursor.execute("""
+            ALTER TABLE participantes
+            ADD COLUMN codigo_acceso TEXT
+        """)
+
+    if "revelo" not in columnas_participantes:
         cursor.execute("""
             ALTER TABLE participantes
             ADD COLUMN revelo INTEGER DEFAULT 0
@@ -1363,6 +1379,7 @@ def revelar_amigo(codigo_acceso):
         asignado=asignado
     )
 
+actualizar_base_datos()
 
 if __name__ == "__main__":
     app.run(debug=True)
