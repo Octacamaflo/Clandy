@@ -90,49 +90,53 @@
             <p>{{ asignado[7] or "No especificada." }}</p>
 
             <hr>
-            
+
             <h2>💬 Zona secreta</h2>
+
             <p>
                 Comunícate de forma anónima con tu amigo secreto.
             </p>
 
-<a href="/mi-espacio/{{ participante[12] }}/chat">
-    <button>
-        💬 Abrir chat secreto
-    </button>
-</a>
+            <a href="/mi-espacio/{{ participante[12] }}/chat">
+                <button>
+                    💬 Abrir chat secreto
+                </button>
+            </a>
 
-<br><br>
+            <br><br>
 
-<a href="/mi-espacio/{{ participante[12] }}/pistas">
-    <button>
-        🔎 Ver pistas
-    </button>
-</a>
-        {% elif revelacion and asignado %}
+            <a href="/mi-espacio/{{ participante[12] }}/pistas">
+                <button>
+                    🔎 Ver pistas
+                </button>
+            </a>
 
-    <hr>
+        {% endif %}
 
-    <h2>
-        🎉 ¡LLEGÓ EL MOMENTO!
-    </h2>
+    {% elif revelacion and asignado %}
 
-    <p>
-        La fecha de revelación ha llegado.
-    </p>
+        <hr>
 
-    <form
-        method="POST"
-        action="/mi-espacio/{{ participante[12] }}/revelar"
-    >
+        <h2>
+            🎉 ¡LLEGÓ EL MOMENTO!
+        </h2>
 
-        <button type="submit">
-            🎁 REVELAR MI AMIGO SECRETO
-        </button>
+        <p>
+            La fecha de revelación ha llegado.
+        </p>
 
-    </form>
+        <form
+            method="POST"
+            action="/mi-espacio/{{ participante[12] }}/revelar"
+        >
 
-{% endif %}
+            <button type="submit">
+                🎁 REVELAR MI AMIGO SECRETO
+            </button>
+
+        </form>
+
+    {% endif %}
 
 </body>
 
