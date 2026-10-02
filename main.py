@@ -1,9 +1,11 @@
-import sqlite3
 import secrets
 import string
 import random
 import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+import psycopg2
 
 from flask import Flask, render_template, request, redirect
 
@@ -11,6 +13,8 @@ from flask_mail import Mail, Message
 
 
 app = Flask(__name__)
+
+load_dotenv()
 
 URL_CLANDY = "https://clandy-279a.onrender.com"
 
@@ -24,7 +28,9 @@ app.config["MAIL_DEFAULT_SENDER"] = os.environ.get("MAIL_SENDER")
 mail = Mail(app)
 
 def conectar():
-    return sqlite3.connect("clandy.db")
+    return psycopg2.connect(
+        os.environ.get("DATABASE_URL")
+    )
 
 def enviar_correo(destinatario, asunto, contenido):
 
@@ -39,12 +45,13 @@ def enviar_correo(destinatario, asunto, contenido):
     mail.send(mensaje)
 
 def actualizar_base_datos():
+
     conexion = conectar()
     cursor = conexion.cursor()
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS eventos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             nombre TEXT NOT NULL,
             fecha TEXT NOT NULL,
             hora TEXT NOT NULL,
@@ -58,7 +65,7 @@ def actualizar_base_datos():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS participantes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             evento_id INTEGER NOT NULL,
             nombre TEXT NOT NULL,
             correo TEXT NOT NULL,
@@ -78,7 +85,7 @@ def actualizar_base_datos():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS restricciones (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             evento_id INTEGER NOT NULL,
             participante_id INTEGER NOT NULL,
             restringido_id INTEGER NOT NULL,
@@ -90,7 +97,7 @@ def actualizar_base_datos():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS asignaciones (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             evento_id INTEGER NOT NULL,
             participante_id INTEGER NOT NULL,
             asignado_id INTEGER NOT NULL,
@@ -102,12 +109,12 @@ def actualizar_base_datos():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS mensajes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             evento_id INTEGER NOT NULL,
             remitente_id INTEGER NOT NULL,
             destinatario_id INTEGER NOT NULL,
             mensaje TEXT NOT NULL,
-            fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+            fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (evento_id) REFERENCES eventos(id),
             FOREIGN KEY (remitente_id) REFERENCES participantes(id),
             FOREIGN KEY (destinatario_id) REFERENCES participantes(id)
@@ -116,76 +123,22 @@ def actualizar_base_datos():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS pistas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             evento_id INTEGER NOT NULL,
             remitente_id INTEGER NOT NULL,
             destinatario_id INTEGER NOT NULL,
             pista TEXT NOT NULL,
-            fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+            fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (evento_id) REFERENCES eventos(id),
             FOREIGN KEY (remitente_id) REFERENCES participantes(id),
             FOREIGN KEY (destinatario_id) REFERENCES participantes(id)
         )
     """)
 
-    columnas_eventos = [
-        fila[1]
-        for fila in cursor.execute(
-            "PRAGMA table_info(eventos)"
-        )
-    ]
-
-    if "codigo" not in columnas_eventos:
-        cursor.execute("""
-            ALTER TABLE eventos
-            ADD COLUMN codigo TEXT
-        """)
-
-    if "codigo_admin" not in columnas_eventos:
-        cursor.execute("""
-            ALTER TABLE eventos
-            ADD COLUMN codigo_admin TEXT
-        """)
-
-    if "estado" not in columnas_eventos:
-        cursor.execute("""
-            ALTER TABLE eventos
-            ADD COLUMN estado TEXT DEFAULT 'abierto'
-        """)
-
-    if "presupuesto_minimo" not in columnas_eventos:
-        cursor.execute("""
-            ALTER TABLE eventos
-            ADD COLUMN presupuesto_minimo REAL
-        """)
-
-    if "presupuesto_maximo" not in columnas_eventos:
-        cursor.execute("""
-            ALTER TABLE eventos
-            ADD COLUMN presupuesto_maximo REAL
-        """)
-
-    columnas_participantes = [
-        fila[1]
-        for fila in cursor.execute(
-            "PRAGMA table_info(participantes)"
-        )
-    ]
-
-    if "codigo_acceso" not in columnas_participantes:
-        cursor.execute("""
-            ALTER TABLE participantes
-            ADD COLUMN codigo_acceso TEXT
-        """)
-
-    if "revelo" not in columnas_participantes:
-        cursor.execute("""
-            ALTER TABLE participantes
-            ADD COLUMN revelo INTEGER DEFAULT 0
-        """)
-
     conexion.commit()
+    cursor.close()
     conexion.close()
+
 
 def generar_codigo():
     caracteres = string.ascii_uppercase + string.digits
@@ -229,7 +182,8 @@ def crear_evento():
                 codigo,
                 codigo_admin
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
         """, (
             nombre,
             fecha,
@@ -240,9 +194,8 @@ def crear_evento():
             codigo_admin
         ))
 
+        id_evento = cursor.fetchone()[0]
         conexion.commit()
-
-        id_evento = cursor.lastrowid
 
         conexion.close()
 
@@ -278,7 +231,7 @@ def unirse(codigo):
             codigo_admin,
             estado
         FROM eventos
-        WHERE codigo = ?
+        WHERE codigo = %s
     """, (codigo,))
 
     evento = cursor.fetchone()
@@ -335,8 +288,8 @@ def unirse(codigo):
         cursor.execute("""
             SELECT id
             FROM participantes
-            WHERE evento_id = ?
-            AND correo = ?
+            WHERE evento_id = %s
+            AND correo = %s
         """, (
             evento[0],
             correo
@@ -398,7 +351,7 @@ def unirse(codigo):
                 deseos,
                 codigo_acceso
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             evento[0],
             nombre,
@@ -493,7 +446,7 @@ def recuperar_acceso():
             FROM participantes p
             JOIN eventos e
                 ON p.evento_id = e.id
-            WHERE p.correo = ?
+            WHERE p.correo = %s
         """, (correo,))
 
         participantes = cursor.fetchall()
@@ -505,7 +458,7 @@ def recuperar_acceso():
             for nombre, codigo_acceso, nombre_evento in participantes:
 
                 enlace = (
-                    f"{URL_CLANDY}"
+                    f"{URL_CLANDY}/"
                     f"mi-espacio/{codigo_acceso}"
                 )
 
@@ -585,7 +538,7 @@ def mi_espacio(codigo_acceso):
         FROM participantes p
         JOIN eventos e
             ON p.evento_id = e.id
-        WHERE p.codigo_acceso = ?
+        WHERE p.codigo_acceso = %s
     """, (codigo_acceso,))
 
     participante = cursor.fetchone()
@@ -624,8 +577,8 @@ def mi_espacio(codigo_acceso):
             FROM asignaciones a
             JOIN participantes p
                 ON a.asignado_id = p.id
-            WHERE a.evento_id = ?
-            AND a.participante_id = ?
+            WHERE a.evento_id = %s
+            AND a.participante_id = %s
         """, (
             participante[1],
             participante[0]
@@ -668,7 +621,7 @@ def entrar_organizador():
         cursor.execute("""
             SELECT id
             FROM eventos
-            WHERE codigo_admin = ?
+            WHERE codigo_admin = %s
         """, (codigo_admin,))
 
         evento = cursor.fetchone()
@@ -704,7 +657,7 @@ def entrar_invitacion():
         cursor.execute("""
             SELECT id
             FROM eventos
-            WHERE codigo = ?
+            WHERE codigo = %s
         """, (codigo,))
 
         evento = cursor.fetchone()
@@ -734,7 +687,7 @@ def cerrar_inscripciones(codigo_admin):
     cursor.execute("""
         UPDATE eventos
         SET estado = 'cerrado'
-        WHERE codigo_admin = ?
+        WHERE codigo_admin = %s
         AND estado = 'abierto'
     """, (codigo_admin,))
 
@@ -761,7 +714,7 @@ def agregar_restriccion(codigo_admin):
     cursor.execute("""
         SELECT id
         FROM eventos
-        WHERE codigo_admin = ?
+        WHERE codigo_admin = %s
     """, (codigo_admin,))
 
     evento = cursor.fetchone()
@@ -791,8 +744,8 @@ def agregar_restriccion(codigo_admin):
     cursor.execute("""
         SELECT id
         FROM participantes
-        WHERE id = ?
-        AND evento_id = ?
+        WHERE id = %s
+        AND evento_id = %s
     """, (
         participante_id,
         evento_id
@@ -803,8 +756,8 @@ def agregar_restriccion(codigo_admin):
     cursor.execute("""
         SELECT id
         FROM participantes
-        WHERE id = ?
-        AND evento_id = ?
+        WHERE id = %s
+        AND evento_id = %s
     """, (
         restringido_id,
         evento_id
@@ -823,9 +776,9 @@ def agregar_restriccion(codigo_admin):
     cursor.execute("""
         SELECT id
         FROM restricciones
-        WHERE evento_id = ?
-        AND participante_id = ?
-        AND restringido_id = ?
+        WHERE evento_id = %s
+        AND participante_id = %s
+        AND restringido_id = %s
     """, (
         evento_id,
         participante_id,
@@ -842,7 +795,7 @@ def agregar_restriccion(codigo_admin):
                 participante_id,
                 restringido_id
             )
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
         """, (
             evento_id,
             participante_id,
@@ -863,7 +816,7 @@ def realizar_sorteo(evento_id):
     cursor.execute("""
         SELECT id
         FROM participantes
-        WHERE evento_id = ?
+        WHERE evento_id = %s
     """, (evento_id,))
 
     participantes = [
@@ -880,7 +833,7 @@ def realizar_sorteo(evento_id):
             participante_id,
             restringido_id
         FROM restricciones
-        WHERE evento_id = ?
+        WHERE evento_id = %s
     """, (evento_id,))
 
     restricciones = {}
@@ -927,7 +880,7 @@ def realizar_sorteo(evento_id):
 
             cursor.execute("""
                 DELETE FROM asignaciones
-                WHERE evento_id = ?
+                WHERE evento_id = %s
             """, (evento_id,))
 
             for participante_id, asignado_id in asignaciones.items():
@@ -938,7 +891,7 @@ def realizar_sorteo(evento_id):
                         participante_id,
                         asignado_id
                     )
-                    VALUES (?, ?, ?)
+                    VALUES (%s, %s, %s)
                 """, (
                     evento_id,
                     participante_id,
@@ -948,7 +901,7 @@ def realizar_sorteo(evento_id):
             cursor.execute("""
                 UPDATE eventos
                 SET estado = 'sorteado'
-                WHERE id = ?
+                WHERE id = %s
             """, (evento_id,))
 
             conexion.commit()
@@ -958,7 +911,7 @@ def realizar_sorteo(evento_id):
                     p.correo,
                     p.nombre
                 FROM participantes p
-                WHERE p.evento_id = ?
+                WHERE p.evento_id = %s
             """, (evento_id,))
 
             participantes_correo = cursor.fetchall()
@@ -1010,7 +963,7 @@ def realizar_sorteo_ruta(codigo_admin):
     cursor.execute("""
         SELECT id, estado
         FROM eventos
-        WHERE codigo_admin = ?
+        WHERE codigo_admin = %s
     """, (codigo_admin,))
 
     evento = cursor.fetchone()
@@ -1042,7 +995,7 @@ def panel(codigo_admin):
     cursor.execute("""
         SELECT *
         FROM eventos
-        WHERE codigo_admin = ?
+        WHERE codigo_admin = %s
     """, (codigo_admin,))
 
     evento = cursor.fetchone()
@@ -1066,7 +1019,7 @@ def panel(codigo_admin):
     cursor.execute("""
         SELECT *
         FROM participantes
-        WHERE evento_id = ?
+        WHERE evento_id = %s
     """, (evento[0],))
 
     participantes = cursor.fetchall()
@@ -1082,7 +1035,7 @@ def panel(codigo_admin):
         ON restricciones.participante_id = p1.id
     JOIN participantes p2
         ON restricciones.restringido_id = p2.id
-    WHERE restricciones.evento_id = ?
+    WHERE restricciones.evento_id = %s
     """, (evento[0],))
 
     restricciones = cursor.fetchall()
@@ -1112,7 +1065,7 @@ def chat_secreto(codigo_acceso):
             nombre,
             codigo_acceso
         FROM participantes
-        WHERE codigo_acceso = ?
+        WHERE codigo_acceso = %s
     """, (codigo_acceso,))
 
     participante = cursor.fetchone()
@@ -1127,8 +1080,8 @@ def chat_secreto(codigo_acceso):
     cursor.execute("""
         SELECT asignado_id
         FROM asignaciones
-        WHERE evento_id = ?
-        AND participante_id = ?
+        WHERE evento_id = %s
+        AND participante_id = %s
     """, (
         evento_id,
         participante_id
@@ -1159,7 +1112,7 @@ def chat_secreto(codigo_acceso):
                     destinatario_id,
                     mensaje
                 )
-                VALUES (?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s)
             """, (
                 evento_id,
                 participante_id,
@@ -1175,13 +1128,13 @@ def chat_secreto(codigo_acceso):
             mensaje,
             fecha
         FROM mensajes
-        WHERE evento_id = ?
+        WHERE evento_id = %s
         AND (
-            (remitente_id = ?
-             AND destinatario_id = ?)
+            (remitente_id = %s
+             AND destinatario_id = %s)
             OR
-            (remitente_id = ?
-             AND destinatario_id = ?)
+            (remitente_id = %s
+             AND destinatario_id = %s)
         )
         ORDER BY fecha ASC
     """, (
@@ -1215,7 +1168,7 @@ def pistas(codigo_acceso):
             nombre,
             codigo_acceso
         FROM participantes
-        WHERE codigo_acceso = ?
+        WHERE codigo_acceso = %s
     """, (codigo_acceso,))
 
     participante = cursor.fetchone()
@@ -1230,8 +1183,8 @@ def pistas(codigo_acceso):
     cursor.execute("""
         SELECT asignado_id
         FROM asignaciones
-        WHERE evento_id = ?
-        AND participante_id = ?
+        WHERE evento_id = %s
+        AND participante_id = %s
     """, (
         evento_id,
         participante_id
@@ -1262,7 +1215,7 @@ def pistas(codigo_acceso):
                     destinatario_id,
                     pista
                 )
-                VALUES (?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s)
             """, (
                 evento_id,
                 participante_id,
@@ -1277,8 +1230,8 @@ def pistas(codigo_acceso):
             pista,
             fecha
         FROM pistas
-        WHERE evento_id = ?
-        AND destinatario_id = ?
+        WHERE evento_id = %s
+        AND destinatario_id = %s
         ORDER BY fecha ASC
     """, (
         evento_id,
@@ -1314,7 +1267,7 @@ def revelar_amigo(codigo_acceso):
         FROM participantes p
         JOIN eventos e
             ON p.evento_id = e.id
-        WHERE p.codigo_acceso = ?
+        WHERE p.codigo_acceso = %s
     """, (codigo_acceso,))
 
     participante = cursor.fetchone()
@@ -1362,8 +1315,8 @@ def revelar_amigo(codigo_acceso):
         FROM asignaciones a
         JOIN participantes p
             ON a.asignado_id = p.id
-        WHERE a.evento_id = ?
-        AND a.participante_id = ?
+        WHERE a.evento_id = %s
+        AND a.participante_id = %s
     """, (evento_id, participante_id))
 
     asignado = cursor.fetchone()
@@ -1379,7 +1332,7 @@ def revelar_amigo(codigo_acceso):
         cursor.execute("""
             UPDATE participantes
             SET revelo = 1
-            WHERE id = ?
+            WHERE id = %s
         """, (participante_id,))
 
         conexion.commit()

@@ -3,11 +3,6 @@
 
 <head>
 
-    <meta <!DOCTYPE html>
-<html lang="es">
-
-<head>
-
     <meta charset="UTF-8">
 
     <meta
@@ -48,67 +43,79 @@
     </p>
 
     <p>
-    <strong>Estado:</strong> {% if evento[8] == "abierto" %}
-        🟢 Inscripciones abiertas
-    {% else %}
-        🔴 Inscripciones cerradas
-    {% endif %}  
+        <strong>Estado:</strong>
 
-</p>{% if evento[8] == "abierto" %}
+        {% if evento[8] == "abierto" %}
 
-    <form
-        method="POST"
-        action="/cerrar-inscripciones/{{ evento[7] }}"
-    >
+            🟢 Inscripciones abiertas
 
-        <button type="submit">
-            🔒 Cerrar inscripciones
-        </button>
+        {% elif evento[8] == "cerrado" %}
 
-    </form>
+            🔴 Inscripciones cerradas
 
-{% else %}
+        {% elif evento[8] == "sorteado" %}
 
-    <p>
-        Las inscripciones están cerradas.
+            🎲 Sorteo realizado
+
+        {% endif %}
+
     </p>
 
-{% endif %}
+    {% if evento[8] == "abierto" %}
 
-{% if evento[8] == "cerrado" %}
+        <form
+            method="POST"
+            action="/cerrar-inscripciones/{{ evento[7] }}"
+        >
 
-    <hr>
+            <button type="submit">
+                🔒 Cerrar inscripciones
+            </button>
 
-    <h2>Realizar sorteo</h2>
+        </form>
 
-    <p>
-        Las inscripciones están cerradas.
-        Ya puedes realizar el sorteo.
-    </p>
+    {% elif evento[8] == "cerrado" %}
 
-    <form
-        method="POST"
-        action="/realizar-sorteo/{{ evento[7] }}"
-    >
+        <p>
+            Las inscripciones están cerradas.
+        </p>
 
-        <button type="submit">
-            🎲 Realizar sorteo
-        </button>
+        <hr>
 
-    </form>
+        <h2>🎲 Realizar sorteo</h2>
 
-{% elif evento[8] == "sorteado" %}
+        <p>
+            Todos los participantes están registrados.
+            Puedes realizar el sorteo.
+        </p>
 
-    <hr>
+        <form
+            method="POST"
+            action="/realizar-sorteo/{{ evento[7] }}"
+        >
 
-    <h2>🎲 Sorteo realizado</h2>
+            <button type="submit">
+                🎲 Realizar sorteo
+            </button>
 
-    <p>
-        El sorteo ya fue realizado.
-        Las asignaciones permanecen privadas.
-    </p>
+        </form>
 
-{% endif %}
+    {% elif evento[8] == "sorteado" %}
+
+        <hr>
+
+        <h2>🎲 Sorteo realizado</h2>
+
+        <p>
+            El sorteo ya fue realizado.
+        </p>
+
+        <p>
+            Las asignaciones permanecen privadas
+            hasta la fecha de revelación.
+        </p>
+
+    {% endif %}
 
     <hr>
 
@@ -188,159 +195,98 @@
 
     <hr>
 
-    <hr>
-
-<h2>Restricciones</h2>
-
-<p>
-    Indica qué participante no puede sacar a otra persona.
-</p>
-
-<form
-    method="POST"
-    action="/agregar-restriccion/{{ evento[7] }}"
->
-
-    <label>
-        Participante:
-    </label>
-
-    <select name="participante_id" required>
-
-        <option value="">
-            Seleccionar participante
-        </option>
-
-        {% for participante in participantes %}
-
-            <option value="{{ participante[0] }}">
-                {{ participante[2] }}
-            </option>
-
-        {% endfor %}
-
-    </select>
-
-    <br><br>
-
-    <label>
-        No puede sacar a:
-    </label>
-
-    <select name="restringido_id" required>
-
-        <option value="">
-            Seleccionar participante
-        </option>
-
-        {% for participante in participantes %}
-
-            <option value="{{ participante[0] }}">
-                {{ participante[2] }}
-            </option>
-
-        {% endfor %}
-
-    </select>
-
-    <br><br>
-
-    <button type="submit">
-        Agregar restricción
-    </button>
-
-</form>
-
-{% if restricciones %}
-
-    <h3>Restricciones actuales</h3>
-
-    <ul>
-
-        {% for restriccion in restricciones %}
-
-            <li>
-                {{ restriccion[2] }}
-                no puede sacar a
-                {{ restriccion[3] }}
-            </li>
-
-        {% endfor %}
-
-    </ul>
-
-{% else %}
+    <h2>Restricciones</h2>
 
     <p>
-        No hay restricciones configuradas.
+        Indica qué participante no puede sacar a otra persona.
     </p>
 
-{% endif %}
-
-    <a href="/">
-        Volver a Clandy
-    </a>
-
-</body>
-
-</html>charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
+    <form
+        method="POST"
+        action="/agregar-restriccion/{{ evento[7] }}"
     >
 
-    <title>Panel | Clandy</title>
+        <label>
+            Participante:
+        </label>
 
-</head>
+        <select name="participante_id" required>
 
-<body>
+            <option value="">
+                Seleccionar participante
+            </option>
 
-    <h1>Panel del organizador</h1>
+            {% for participante in participantes %}
 
-    <h2>{{ evento[1] }}</h2>
+                <option value="{{ participante[0] }}">
+                    {{ participante[2] }}
+                </option>
 
-    <p>
-        <strong>Fecha de revelación:</strong>
-        {{ evento[2] }}
-    </p>
+            {% endfor %}
 
-    <p>
-        <strong>Hora:</strong>
-        {{ evento[3] }}
-    </p>
+        </select>
 
-    <p>
-        <strong>Participantes:</strong>
-        {{ participantes|length }}
-    </p>
+        <br><br>
 
-    <hr>
+        <label>
+            No puede sacar a:
+        </label>
 
-    <h2>Participantes</h2>
+        <select name="restringido_id" required>
 
-    {% if participantes %}
+            <option value="">
+                Seleccionar participante
+            </option>
+
+            {% for participante in participantes %}
+
+                <option value="{{ participante[0] }}">
+                    {{ participante[2] }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+        <br><br>
+
+        <button type="submit">
+            Agregar restricción
+        </button>
+
+    </form>
+
+    {% if restricciones %}
+
+        <h3>Restricciones actuales</h3>
 
         <ul>
 
-        {% for participante in participantes %}
+            {% for restriccion in restricciones %}
 
-            <li>
-                {{ participante[2] }}
-                — {{ participante[3] }}
-            </li>
+                <li>
+                    {{ restriccion[2] }}
+                    no puede sacar a
+                    {{ restriccion[3] }}
+                </li>
 
-        {% endfor %}
+            {% endfor %}
 
         </ul>
 
     {% else %}
 
         <p>
-            Todavía no hay participantes.
+            No hay restricciones configuradas.
         </p>
 
     {% endif %}
+
+    <hr>
+
+    <a href="/">
+        Volver a Clandy
+    </a>
 
 </body>
 
