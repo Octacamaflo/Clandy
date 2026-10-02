@@ -11,6 +11,8 @@ from flask_mail import Mail, Message
 
 
 app = Flask(__name__)
+URL_CLANDY = "https://clandy-279a.onrender.com"
+
 
 app.config["MAIL_SERVER"] = "smtp.gmail.com"
 app.config["MAIL_PORT"] = 587
@@ -412,12 +414,12 @@ def unirse(codigo):
             codigo_acceso
         ))
 
-        conexion.commit()        
+        conexion.commit()
+        
         enlace_privado = (
-            f"http://127.0.0.1:5000/"
-            f"mi-espacio/{codigo_acceso}"
-        )
-
+            f"{URL_CLANDY}/mi-espacio/{codigo_acceso}"
+        )        
+        
         try:
 
             enviar_correo(
@@ -453,10 +455,10 @@ Clandy
         
         conexion.close()
 
-        enlace_privado = (
-            f"/mi-espacio/{codigo_acceso}"
+        enlace_privado =(
+            f"{URL_CLANDY}/mi-espacio/{codigo_acceso}"
         )
-
+        
         return render_template(
             "registro_exitoso.html",
             nombre=nombre,
@@ -503,7 +505,7 @@ def recuperar_acceso():
             for nombre, codigo_acceso, nombre_evento in participantes:
 
                 enlace = (
-                    f"http://127.0.0.1:5000/"
+                    f"{URL_CLANDY}"
                     f"mi-espacio/{codigo_acceso}"
                 )
 
