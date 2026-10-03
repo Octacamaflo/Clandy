@@ -1,43 +1,89 @@
 <!DOCTYPE html>
+
 <html lang="es">
 
 <head>
 
-    <meta charset="UTF-8">
+```
+<meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
 
-    <title>Mi espacio | Clandy</title>
+<title>Mi espacio | Clandy</title>
+```
 
 </head>
 
 <body>
 
-    <h1>CLANDY 🎁</h1>
+```
+<h1>CLANDY 🎁</h1>
 
-    <h2>
-        Hola, {{ participante[2] }}
-    </h2>
+<h2>
+    Hola, {{ participante[2] }}
+</h2>
+
+<p>
+    Evento: <strong>{{ participante[13] }}</strong>
+</p>
+
+<hr>
+
+{% if participante[16] != "sorteado" %}
+
+    <h2>⏳ El sorteo todavía no está disponible</h2>
 
     <p>
-        Evento: <strong>{{ participante[13] }}</strong>
+        El organizador todavía no ha realizado
+        el sorteo.
     </p>
 
-    <hr>
+{% else %}
 
-    {% if participante[16] != "sorteado" %}
+    {% if mensajes_nuevos > 0 %}
 
-        <h2>⏳ El sorteo todavía no está disponible</h2>
+        <h2>💬 ¡Tienes mensajes nuevos!</h2>
 
         <p>
-            El organizador todavía no ha realizado
-            el sorteo.
+            Tu amigo secreto te ha enviado
+            {{ mensajes_nuevos }}
+            mensaje{% if mensajes_nuevos != 1 %}s{% endif %}.
         </p>
 
-    {% elif not revelacion %}
+        <a href="/mi-espacio/{{ participante[12] }}/chat">
+            <button>
+                💬 Ver mensajes
+            </button>
+        </a>
+
+        <hr>
+
+    {% endif %}
+
+    {% if pistas_nuevas > 0 %}
+
+        <h2>🔎 ¡Tienes pistas nuevas!</h2>
+
+        <p>
+            Tu amigo secreto te ha enviado
+            {{ pistas_nuevas }}
+            pista{% if pistas_nuevas != 1 %}s{% endif %}.
+        </p>
+
+        <a href="/mi-espacio/{{ participante[12] }}/pistas">
+            <button>
+                🔎 Ver pistas
+            </button>
+        </a>
+
+        <hr>
+
+    {% endif %}
+
+    {% if not revelacion %}
 
         <h2>
             🤫 Tu amigo secreto está esperando
@@ -72,22 +118,34 @@
             </p>
 
             <h3>Gustos</h3>
-            <p>{{ asignado[2] or "No especificados." }}</p>
+            <p>
+                {{ asignado[2] or "No especificados." }}
+            </p>
 
             <h3>Disgustos</h3>
-            <p>{{ asignado[3] or "No especificados." }}</p>
+            <p>
+                {{ asignado[3] or "No especificados." }}
+            </p>
 
             <h3>Hobbies</h3>
-            <p>{{ asignado[4] or "No especificados." }}</p>
+            <p>
+                {{ asignado[4] or "No especificados." }}
+            </p>
 
             <h3>Colores</h3>
-            <p>{{ asignado[5] or "No especificados." }}</p>
+            <p>
+                {{ asignado[5] or "No especificados." }}
+            </p>
 
             <h3>Tallas</h3>
-            <p>{{ asignado[6] or "No especificadas." }}</p>
+            <p>
+                {{ asignado[6] or "No especificadas." }}
+            </p>
 
             <h3>Lista de deseos</h3>
-            <p>{{ asignado[7] or "No especificada." }}</p>
+            <p>
+                {{ asignado[7] or "No especificada." }}
+            </p>
 
             <hr>
 
@@ -113,30 +171,37 @@
 
         {% endif %}
 
-    {% elif revelacion and asignado %}
+    {% else %}
 
-        <hr>
+        {% if asignado %}
 
-        <h2>
-            🎉 ¡LLEGÓ EL MOMENTO!
-        </h2>
+            <hr>
 
-        <p>
-            La fecha de revelación ha llegado.
-        </p>
+            <h2>
+                🎉 ¡Llegó el momento!
+            </h2>
 
-        <form
-            method="POST"
-            action="/mi-espacio/{{ participante[12] }}/revelar"
-        >
+            <p>
+                La fecha de revelación ha llegado.
+            </p>
 
-            <button type="submit">
-                🎁 REVELAR MI AMIGO SECRETO
-            </button>
+            <form
+                method="POST"
+                action="/mi-espacio/{{ participante[12] }}/revelar"
+            >
 
-        </form>
+                <button type="submit">
+                    🎁 REVELAR MI AMIGO SECRETO
+                </button>
+
+            </form>
+
+        {% endif %}
 
     {% endif %}
+
+{% endif %}
+```
 
 </body>
 

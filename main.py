@@ -3,6 +3,7 @@ import string
 import random
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 
 import psycopg2
@@ -15,6 +16,8 @@ from flask_mail import Mail, Message
 app = Flask(__name__)
 
 load_dotenv()
+
+ZONA_HORARIA = ZoneInfo("America/Bogota")
 
 URL_CLANDY = "https://clandy-279a.onrender.com"
 
@@ -115,6 +118,7 @@ def actualizar_base_datos():
             destinatario_id INTEGER NOT NULL,
             mensaje TEXT NOT NULL,
             fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            leido INTEGER DEFAULT 0,
             FOREIGN KEY (evento_id) REFERENCES eventos(id),
             FOREIGN KEY (remitente_id) REFERENCES participantes(id),
             FOREIGN KEY (destinatario_id) REFERENCES participantes(id)
@@ -129,16 +133,26 @@ def actualizar_base_datos():
             destinatario_id INTEGER NOT NULL,
             pista TEXT NOT NULL,
             fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            leido INTEGER DEFAULT 0,
             FOREIGN KEY (evento_id) REFERENCES eventos(id),
             FOREIGN KEY (remitente_id) REFERENCES participantes(id),
             FOREIGN KEY (destinatario_id) REFERENCES participantes(id)
         )
     """)
 
+    cursor.execute("""
+        ALTER TABLE mensajes
+        ADD COLUMN IF NOT EXISTS leido INTEGER DEFAULT 0
+    """)
+
+    cursor.execute("""
+        ALTER TABLE pistas
+        ADD COLUMN IF NOT EXISTS leido INTEGER DEFAULT 0
+    """)
+
     conexion.commit()
     cursor.close()
     conexion.close()
-
 
 def generar_codigo():
     caracteres = string.ascii_uppercase + string.digits
@@ -511,6 +525,7 @@ Clandy 🎁
 
 
 @app.route("/mi-espacio/<codigo_acceso>")
+@app.route("/mi-espacio/<codigo_acceso>")
 def mi_espacio(codigo_acceso):
 
     conexion = conectar()
@@ -559,6 +574,9 @@ def mi_espacio(codigo_acceso):
         </a>
         """
 
+    participante_id = participante[0]
+    evento_id = participante[1]
+
     asignado = None
     revelacion = False
 
@@ -580,22 +598,59 @@ def mi_espacio(codigo_acceso):
             WHERE a.evento_id = %s
             AND a.participante_id = %s
         """, (
-            participante[1],
-            participante[0]
+            evento_id,
+            participante_id
         ))
 
         asignado = cursor.fetchone()
 
         try:
+
             fecha_revelacion = datetime.strptime(
                 f"{participante[14]} {participante[15]}",
                 "%Y-%m-%d %H:%M"
             )
 
-            revelacion = datetime.now() >= fecha_revelacion
+            revelacion = datetime.now(ZONA_HORARIA) >= fecha_revelacion.replace(tzinfo=ZONA_HORARIA)
+
+            print("FECHA EVENTO:", fecha_revelacion)
+            print("HORA ACTUAL:", datetime.now(ZONA_HORARIA))
+            print("REVELACION:", revelacion)
 
         except ValueError:
+
             revelacion = False
+
+    mensajes_nuevos = 0
+    pistas_nuevas = 0
+
+    if asignado:
+
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM mensajes
+            WHERE evento_id = %s
+            AND destinatario_id = %s
+            AND leido = 0
+        """, (
+            evento_id,
+            participante_id
+        ))
+
+        mensajes_nuevos = cursor.fetchone()[0]
+
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM pistas
+            WHERE evento_id = %s
+            AND destinatario_id = %s
+            AND leido = 0
+        """, (
+            evento_id,
+            participante_id
+        ))
+
+        pistas_nuevas = cursor.fetchone()[0]
 
     conexion.close()
 
@@ -603,7 +658,9 @@ def mi_espacio(codigo_acceso):
         "mi_espacio.html",
         participante=participante,
         asignado=asignado,
-        revelacion=revelacion
+        revelacion=revelacion,
+        mensajes_nuevos=mensajes_nuevos,
+        pistas_nuevas=pistas_nuevas
     )
 
 @app.route("/entrar-organizador", methods=["GET", "POST"])
@@ -817,6 +874,7 @@ def realizar_sorteo(evento_id):
         SELECT id
         FROM participantes
         WHERE evento_id = %s
+        ORDER BY id
     """, (evento_id,))
 
     participantes = [
@@ -847,85 +905,124 @@ def realizar_sorteo(evento_id):
             restringido_id
         )
 
-    for _ in range(10000):
+    asignaciones = {}
 
-        disponibles = participantes.copy()
-        random.shuffle(disponibles)
+    def buscar():
 
-        asignaciones = {}
-        valido = True
+        if len(asignaciones) == len(participantes):
+            return True
 
-        for participante_id in participantes:
+        pendientes = [
+            participante_id
+            for participante_id in participantes
+            if participante_id not in asignaciones
+        ]
+
+        candidatos_por_participante = {}
+
+        for participante_id in pendientes:
 
             candidatos = [
-                persona
-                for persona in disponibles
-                if persona != participante_id
-                and persona not in restricciones.get(
+                persona_id
+                for persona_id in participantes
+                if persona_id not in asignaciones.values()
+                and persona_id != participante_id
+                and persona_id not in restricciones.get(
                     participante_id,
                     set()
                 )
             ]
 
             if not candidatos:
-                valido = False
-                break
+                return False
 
-            asignado = random.choice(candidatos)
+            candidatos_por_participante[
+                participante_id
+            ] = candidatos
 
-            asignaciones[participante_id] = asignado
-            disponibles.remove(asignado)
+        participante_id = min(
+            pendientes,
+            key=lambda x: len(
+                candidatos_por_participante[x]
+            )
+        )
 
-        if valido and not disponibles:
+        candidatos = candidatos_por_participante[
+            participante_id
+        ]
 
-            cursor.execute("""
-                DELETE FROM asignaciones
-                WHERE evento_id = %s
-            """, (evento_id,))
+        random.shuffle(candidatos)
 
-            for participante_id, asignado_id in asignaciones.items():
+        for asignado_id in candidatos:
 
-                cursor.execute("""
-                    INSERT INTO asignaciones (
-                        evento_id,
-                        participante_id,
-                        asignado_id
-                    )
-                    VALUES (%s, %s, %s)
-                """, (
-                    evento_id,
-                    participante_id,
-                    asignado_id
-                ))
+            asignaciones[
+                participante_id
+            ] = asignado_id
 
-            cursor.execute("""
-                UPDATE eventos
-                SET estado = 'sorteado'
-                WHERE id = %s
-            """, (evento_id,))
+            if buscar():
+                return True
 
-            conexion.commit()
+            del asignaciones[
+                participante_id
+            ]
 
-            cursor.execute("""
-                SELECT
-                    p.correo,
-                    p.nombre
-                FROM participantes p
-                WHERE p.evento_id = %s
-            """, (evento_id,))
+        return False
 
-            participantes_correo = cursor.fetchall()
+    solucion = buscar()
 
-            conexion.close()
+    if not solucion:
 
-            for correo, nombre in participantes_correo:
+        conexion.close()
+        return False
 
-                try:
+    cursor.execute("""
+        DELETE FROM asignaciones
+        WHERE evento_id = %s
+    """, (evento_id,))
 
-                    enviar_correo(
-                        correo,
-                        "🎁 Tu amigo secreto ya fue asignado",
-                        f"""
+    for participante_id, asignado_id in asignaciones.items():
+
+        cursor.execute("""
+            INSERT INTO asignaciones (
+                evento_id,
+                participante_id,
+                asignado_id
+            )
+            VALUES (%s, %s, %s)
+        """, (
+            evento_id,
+            participante_id,
+            asignado_id
+        ))
+
+    cursor.execute("""
+        UPDATE eventos
+        SET estado = 'sorteado'
+        WHERE id = %s
+    """, (evento_id,))
+
+    conexion.commit()
+
+    cursor.execute("""
+        SELECT
+            p.correo,
+            p.nombre
+        FROM participantes p
+        WHERE p.evento_id = %s
+    """, (evento_id,))
+
+    participantes_correo = cursor.fetchall()
+
+    conexion.close()
+
+    for correo, nombre in participantes_correo:
+
+        try:
+
+            enviar_correo(
+                correo,
+                "🎁 Tu amigo secreto ya fue asignado",
+                f"""
 Hola {nombre}.
 
 El sorteo de tu evento ya fue realizado.
@@ -938,21 +1035,17 @@ La identidad permanecerá oculta hasta la fecha oficial de revelación.
 
 Clandy
 """
-                    )
+            )
 
-                except Exception as error:
+        except Exception as error:
 
-                    print(
-                        f"No se pudo enviar el correo a {correo}:"
-                    )
+            print(
+                f"No se pudo enviar el correo a {correo}:"
+            )
 
-                    print(error)
+            print(error)
 
-            return True
-
-    conexion.close()
-
-    return False
+    return True
 
 @app.route("/realizar-sorteo/<codigo_admin>", methods=["POST"])
 def realizar_sorteo_ruta(codigo_admin):
@@ -1049,9 +1142,6 @@ def panel(codigo_admin):
         restricciones=restricciones
     )
 
-
-actualizar_base_datos()
-
 @app.route("/mi-espacio/<codigo_acceso>/chat", methods=["GET", "POST"])
 def chat_secreto(codigo_acceso):
 
@@ -1078,7 +1168,70 @@ def chat_secreto(codigo_acceso):
     evento_id = participante[1]
 
     cursor.execute("""
-        SELECT asignado_id
+        SELECT
+            nombre,
+            fecha,
+            hora,
+            estado
+        FROM eventos
+        WHERE id = %s
+    """, (evento_id,))
+
+    evento = cursor.fetchone()
+
+    if evento is None:
+        conexion.close()
+        return "Evento no encontrado."
+
+    nombre_evento = evento[0]
+    fecha = evento[1]
+    hora = evento[2]
+    estado = evento[3]
+
+    if estado != "sorteado":
+
+        conexion.close()
+
+        return """
+        <h1>Chat secreto</h1>
+
+        <p>
+            El sorteo todavía no ha sido realizado.
+        </p>
+        """
+
+    fecha_revelacion = datetime.strptime(
+        f"{fecha} {hora}",
+        "%Y-%m-%d %H:%M"
+    )
+
+    revelacion = datetime.now(ZONA_HORARIA) >= fecha_revelacion.replace(
+        tzinfo=ZONA_HORARIA
+    )
+
+    if revelacion:
+
+        conexion.close()
+
+        return """
+        <h1>Chat secreto cerrado</h1>
+
+        <p>
+            La fecha de revelación ya llegó.
+        </p>
+
+        <p>
+            El chat secreto ya no está disponible.
+        </p>
+
+        <a href="/">
+            Volver a Clandy
+        </a>
+        """
+
+    cursor.execute("""
+        SELECT
+            asignado_id
         FROM asignaciones
         WHERE evento_id = %s
         AND participante_id = %s
@@ -1090,14 +1243,45 @@ def chat_secreto(codigo_acceso):
     asignacion = cursor.fetchone()
 
     if asignacion is None:
+
         conexion.close()
 
         return """
         <h1>Chat secreto</h1>
-        <p>El sorteo todavía no ha sido realizado.</p>
+
+        <p>
+            No tienes un amigo secreto asignado.
+        </p>
         """
 
     asignado_id = asignacion[0]
+
+    cursor.execute("""
+        SELECT
+            nombre,
+            correo,
+            codigo_acceso
+        FROM participantes
+        WHERE id = %s
+    """, (asignado_id,))
+
+    destinatario = cursor.fetchone()
+
+    if destinatario is None:
+
+        conexion.close()
+
+        return """
+        <h1>Chat secreto</h1>
+
+        <p>
+            No se encontró el destinatario.
+        </p>
+        """
+
+    nombre_destinatario = destinatario[0]
+    correo_destinatario = destinatario[1]
+    codigo_destinatario = destinatario[2]
 
     if request.method == "POST":
 
@@ -1110,9 +1294,10 @@ def chat_secreto(codigo_acceso):
                     evento_id,
                     remitente_id,
                     destinatario_id,
-                    mensaje
+                    mensaje,
+                    leido
                 )
-                VALUES (%s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, 0)
             """, (
                 evento_id,
                 participante_id,
@@ -1121,6 +1306,50 @@ def chat_secreto(codigo_acceso):
             ))
 
             conexion.commit()
+
+            try:
+
+                enviar_correo(
+                    correo_destinatario,
+                    "💬 Tienes un nuevo mensaje en Clandy",
+                    f"""
+Hola {nombre_destinatario}.
+
+Tu amigo secreto te ha enviado un nuevo mensaje
+en el evento "{nombre_evento}".
+
+Puedes entrar a tu espacio privado para leerlo:
+
+{URL_CLANDY}/mi-espacio/{codigo_destinatario}
+
+Recuerda que la identidad de tu amigo secreto
+permanece oculta.
+
+Clandy 🎁
+"""
+                )
+
+            except Exception as error:
+
+                print(
+                    f"No se pudo enviar el correo a {correo_destinatario}:"
+                )
+
+                print(error)
+
+    cursor.execute("""
+        UPDATE mensajes
+        SET leido = 1
+        WHERE evento_id = %s
+        AND destinatario_id = %s
+        AND remitente_id = %s
+    """, (
+        evento_id,
+        participante_id,
+        asignado_id
+    ))
+
+    conexion.commit()
 
     cursor.execute("""
         SELECT
@@ -1181,7 +1410,70 @@ def pistas(codigo_acceso):
     evento_id = participante[1]
 
     cursor.execute("""
-        SELECT asignado_id
+        SELECT
+            nombre,
+            fecha,
+            hora,
+            estado
+        FROM eventos
+        WHERE id = %s
+    """, (evento_id,))
+
+    evento = cursor.fetchone()
+
+    if evento is None:
+        conexion.close()
+        return "Evento no encontrado."
+
+    nombre_evento = evento[0]
+    fecha = evento[1]
+    hora = evento[2]
+    estado = evento[3]
+
+    if estado != "sorteado":
+
+        conexion.close()
+
+        return """
+        <h1>Pistas</h1>
+
+        <p>
+            El sorteo todavía no ha sido realizado.
+        </p>
+        """
+
+    fecha_revelacion = datetime.strptime(
+        f"{fecha} {hora}",
+        "%Y-%m-%d %H:%M"
+    )
+
+    revelacion = datetime.now(ZONA_HORARIA) >= fecha_revelacion.replace(
+        tzinfo=ZONA_HORARIA
+    )
+
+    if revelacion:
+
+        conexion.close()
+
+        return """
+        <h1>Pistas cerradas</h1>
+
+        <p>
+            La fecha de revelación ya llegó.
+        </p>
+
+        <p>
+            Las pistas secretas ya no están disponibles.
+        </p>
+
+        <a href="/">
+            Volver a Clandy
+        </a>
+        """
+
+    cursor.execute("""
+        SELECT
+            asignado_id
         FROM asignaciones
         WHERE evento_id = %s
         AND participante_id = %s
@@ -1193,14 +1485,45 @@ def pistas(codigo_acceso):
     asignacion = cursor.fetchone()
 
     if asignacion is None:
+
         conexion.close()
 
         return """
         <h1>Pistas</h1>
-        <p>El sorteo todavía no ha sido realizado.</p>
+
+        <p>
+            No tienes un amigo secreto asignado.
+        </p>
         """
 
     asignado_id = asignacion[0]
+
+    cursor.execute("""
+        SELECT
+            nombre,
+            correo,
+            codigo_acceso
+        FROM participantes
+        WHERE id = %s
+    """, (asignado_id,))
+
+    destinatario = cursor.fetchone()
+
+    if destinatario is None:
+
+        conexion.close()
+
+        return """
+        <h1>Pistas</h1>
+
+        <p>
+            No se encontró el destinatario.
+        </p>
+        """
+
+    nombre_destinatario = destinatario[0]
+    correo_destinatario = destinatario[1]
+    codigo_destinatario = destinatario[2]
 
     if request.method == "POST":
 
@@ -1213,9 +1536,10 @@ def pistas(codigo_acceso):
                     evento_id,
                     remitente_id,
                     destinatario_id,
-                    pista
+                    pista,
+                    leido
                 )
-                VALUES (%s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, 0)
             """, (
                 evento_id,
                 participante_id,
@@ -1224,6 +1548,50 @@ def pistas(codigo_acceso):
             ))
 
             conexion.commit()
+
+            try:
+
+                enviar_correo(
+                    correo_destinatario,
+                    "🔎 Tienes una nueva pista en Clandy",
+                    f"""
+Hola {nombre_destinatario}.
+
+Tu amigo secreto te ha enviado una nueva pista
+en el evento "{nombre_evento}".
+
+Puedes entrar a tu espacio privado para verla:
+
+{URL_CLANDY}/mi-espacio/{codigo_destinatario}
+
+Recuerda que la identidad de tu amigo secreto
+permanece oculta.
+
+Clandy 🎁
+"""
+                )
+
+            except Exception as error:
+
+                print(
+                    f"No se pudo enviar el correo a {correo_destinatario}:"
+                )
+
+                print(error)
+
+    cursor.execute("""
+        UPDATE pistas
+        SET leido = 1
+        WHERE evento_id = %s
+        AND destinatario_id = %s
+        AND remitente_id = %s
+    """, (
+        evento_id,
+        participante_id,
+        asignado_id
+    ))
+
+    conexion.commit()
 
     cursor.execute("""
         SELECT
@@ -1297,7 +1665,7 @@ def revelar_amigo(codigo_acceso):
         "%Y-%m-%d %H:%M"
     )
 
-    if datetime.now() < fecha_revelacion:
+    if datetime.now(ZONA_HORARIA) < fecha_revelacion.replace(tzinfo=ZONA_HORARIA):
 
         conexion.close()
 
