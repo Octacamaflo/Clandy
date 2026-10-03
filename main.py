@@ -857,7 +857,9 @@ def agregar_restriccion(codigo_admin):
             evento_id,
             participante_id,
             restringido_id
-        ))
+        )
+)
+        conexion.commit()
 
         conexion.close()
 
