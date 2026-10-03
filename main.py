@@ -525,7 +525,6 @@ Clandy 🎁
 
 
 @app.route("/mi-espacio/<codigo_acceso>")
-@app.route("/mi-espacio/<codigo_acceso>")
 def mi_espacio(codigo_acceso):
 
     conexion = conectar()
@@ -1163,7 +1162,9 @@ def chat_secreto(codigo_acceso):
     participante = cursor.fetchone()
 
     if participante is None:
+
         conexion.close()
+
         return "Código de acceso no válido."
 
     participante_id = participante[0]
@@ -1182,7 +1183,9 @@ def chat_secreto(codigo_acceso):
     evento = cursor.fetchone()
 
     if evento is None:
+
         conexion.close()
+
         return "Evento no encontrado."
 
     nombre_evento = evento[0]
@@ -1207,7 +1210,9 @@ def chat_secreto(codigo_acceso):
         "%Y-%m-%d %H:%M"
     )
 
-    revelacion = datetime.now(ZONA_HORARIA) >= fecha_revelacion.replace(
+    revelacion = datetime.now(
+        ZONA_HORARIA
+    ) >= fecha_revelacion.replace(
         tzinfo=ZONA_HORARIA
     )
 
@@ -1287,7 +1292,10 @@ def chat_secreto(codigo_acceso):
 
     if request.method == "POST":
 
-        mensaje = request.form["mensaje"].strip()
+        mensaje = request.form.get(
+            "mensaje",
+            ""
+        ).strip()
 
         if mensaje:
 
@@ -1322,7 +1330,7 @@ en el evento "{nombre_evento}".
 
 Puedes entrar a tu espacio privado para leerlo:
 
-{URL_CLANDY}/mi-espacio/{codigo_destinatario}
+{URL_CLANDY}/mi-espacio/{codigo_destinatario}/chat
 
 Recuerda que la identidad de tu amigo secreto
 permanece oculta.
@@ -1340,20 +1348,6 @@ Clandy 🎁
                 print(error)
 
     cursor.execute("""
-        UPDATE mensajes
-        SET leido = 1
-        WHERE evento_id = %s
-        AND destinatario_id = %s
-        AND remitente_id = %s
-    """, (
-        evento_id,
-        participante_id,
-        asignado_id
-    ))
-
-    conexion.commit()
-
-    cursor.execute("""
         SELECT
             remitente_id,
             mensaje,
@@ -1361,13 +1355,17 @@ Clandy 🎁
         FROM mensajes
         WHERE evento_id = %s
         AND (
-            (remitente_id = %s
-             AND destinatario_id = %s)
+            (
+                remitente_id = %s
+                AND destinatario_id = %s
+            )
             OR
-            (remitente_id = %s
-             AND destinatario_id = %s)
+            (
+                remitente_id = %s
+                AND destinatario_id = %s
+            )
         )
-        ORDER BY fecha ASC
+        ORDER BY fecha ASC, id ASC
     """, (
         evento_id,
         participante_id,
@@ -1377,6 +1375,21 @@ Clandy 🎁
     ))
 
     mensajes = cursor.fetchall()
+
+    cursor.execute("""
+        UPDATE mensajes
+        SET leido = 1
+        WHERE evento_id = %s
+        AND destinatario_id = %s
+        AND remitente_id = %s
+        AND leido = 0
+    """, (
+        evento_id,
+        participante_id,
+        asignado_id
+    ))
+
+    conexion.commit()
 
     conexion.close()
 
