@@ -1347,26 +1347,26 @@ Clandy 🎁
 
                 print(error)
 
-        cursor.execute("""
-        SELECT
-            remitente_id,
-            mensaje,
-            fecha
-        FROM mensajes
-        WHERE evento_id = %s
-        AND (
-            remitente_id = %s
-            OR destinatario_id = %s
-        )
-        ORDER BY fecha ASC, id ASC
-    """, (
-        evento_id,
-        participante_id,
-        participante_id
-    ))
+            cursor.execute("""
+                SELECT
+                    remitente_id,
+                    mensaje,
+                    fecha
+                FROM mensajes
+                WHERE evento_id = %s
+                AND (
+                    remitente_id = %s
+                    OR destinatario_id = %s
+                )
+                ORDER BY fecha ASC, id ASC
+            """, (
+                evento_id,
+                participante_id,
+                participante_id
+            ))
 
-    mensajes = cursor.fetchall()
-    
+            mensajes = cursor.fetchall()
+
     cursor.execute("""
         UPDATE mensajes
         SET leido = 1
